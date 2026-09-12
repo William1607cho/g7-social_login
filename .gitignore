@@ -1,0 +1,17 @@
+# Composer
+/vendor/
+composer.lock
+
+# OS / editor
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Local / scratch
+*.bak
+*.bak-*
+*.local
+*.log

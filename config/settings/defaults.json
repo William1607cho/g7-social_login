@@ -1,0 +1,22 @@
+{
+    "_meta": {
+        "version": "1.0.0",
+        "description": "카카오/구글 소셜 로그인 앱 키"
+    },
+    "defaults": {
+        "kakao_enabled": false,
+        "kakao_client_id": "",
+        "kakao_client_secret": "",
+        "google_enabled": false,
+        "google_client_id": "",
+        "google_client_secret": ""
+    },
+    "frontend_schema": {
+        "kakao_enabled": { "expose": true },
+        "kakao_client_id": { "expose": false },
+        "kakao_client_secret": { "expose": false },
+        "google_enabled": { "expose": true },
+        "google_client_id": { "expose": false },
+        "google_client_secret": { "expose": false }
+    }
+}

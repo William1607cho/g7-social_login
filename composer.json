@@ -1,0 +1,23 @@
+{
+    "name": "plugins/g7-social_login",
+    "description": "Kakao/Google OAuth login, auto-link by verified email, and manual link/unlink from the member profile page for Gnuboard7",
+    "type": "library",
+    "version": "0.1.0",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "William Cho"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "laravel/socialite": "^5.0",
+        "socialiteproviders/manager": "^4.0",
+        "socialiteproviders/kakao": "^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Plugins\\G7\\SocialLogin\\": ["src/", "./"]
+        }
+    }
+}

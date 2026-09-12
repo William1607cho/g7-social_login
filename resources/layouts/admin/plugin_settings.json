@@ -1,0 +1,58 @@
+{
+    "version": "1.0.0",
+    "meta": {
+        "title": "$t:settings.page_title",
+        "description": "$t:settings.page_description"
+    },
+    "pageConfig": {
+        "notice": "$t:settings.notice",
+        "guide": {
+            "title": "$t:settings.guide_title",
+            "items": [
+                "$t:settings.guide_item_1",
+                "$t:settings.guide_item_2",
+                "$t:settings.guide_item_3"
+            ]
+        }
+    },
+    "schema": {
+        "kakao_enabled": {
+            "type": "boolean",
+            "default": false,
+            "label": "$t:settings.kakao_enabled.label",
+            "hint": "$t:settings.kakao_enabled.hint"
+        },
+        "kakao_client_id": {
+            "type": "string",
+            "default": "",
+            "label": "$t:settings.kakao_client_id.label",
+            "hint": "$t:settings.kakao_client_id.hint"
+        },
+        "kakao_client_secret": {
+            "type": "string",
+            "default": "",
+            "sensitive": true,
+            "label": "$t:settings.kakao_client_secret.label",
+            "hint": "$t:settings.kakao_client_secret.hint"
+        },
+        "google_enabled": {
+            "type": "boolean",
+            "default": false,
+            "label": "$t:settings.google_enabled.label",
+            "hint": "$t:settings.google_enabled.hint"
+        },
+        "google_client_id": {
+            "type": "string",
+            "default": "",
+            "label": "$t:settings.google_client_id.label",
+            "hint": "$t:settings.google_client_id.hint"
+        },
+        "google_client_secret": {
+            "type": "string",
+            "default": "",
+            "sensitive": true,
+            "label": "$t:settings.google_client_secret.label",
+            "hint": "$t:settings.google_client_secret.hint"
+        }
+    }
+}

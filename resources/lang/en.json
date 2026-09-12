@@ -1,0 +1,45 @@
+{
+    "name": "Social Login (Kakao/Google)",
+    "description": "Adds Kakao and Google OAuth login/signup.",
+    "settings": {
+        "page_title": "Social Login Settings",
+        "page_description": "Enter the app keys issued by the Kakao/Google developer consoles and turn each provider on.",
+        "notice": "Register the redirect URI in each console as {base_url}/api/plugins/g7-social_login/kakao/callback and {base_url}/api/plugins/g7-social_login/google/callback respectively.",
+        "guide_title": "Setup guide",
+        "guide_item_1": "Kakao Developers > My Application > Kakao Login: issue a REST API key (Client ID) and a Client Secret.",
+        "guide_item_2": "Google Cloud Console > APIs & Services > Credentials: create an OAuth client ID.",
+        "guide_item_3": "The login button for a provider is hidden until that provider is turned on.",
+        "kakao_enabled": { "label": "Enable Kakao login", "hint": "Show the Kakao login button on the login screen." },
+        "kakao_client_id": { "label": "Kakao REST API key", "hint": "The REST API key (app key) from the Kakao developer console." },
+        "kakao_client_secret": { "label": "Kakao Client Secret", "hint": "The Client Secret issued under Kakao Login > Security." },
+        "google_enabled": { "label": "Enable Google login", "hint": "Show the Google login button on the login screen." },
+        "google_client_id": { "label": "Google Client ID", "hint": "The OAuth client ID issued by Google Cloud Console." },
+        "google_client_secret": { "label": "Google Client Secret", "hint": "The client secret issued by Google Cloud Console." }
+    },
+    "login": {
+        "kakao_button": "Continue with Kakao",
+        "google_button": "Continue with Google",
+        "divider": "or"
+    },
+    "profile": {
+        "section_title": "Linked social accounts",
+        "kakao": "Kakao",
+        "google": "Google",
+        "linked": "Linked",
+        "not_linked": "Not linked",
+        "link_button": "Link",
+        "unlink_button": "Unlink",
+        "unlink_confirm": "Unlink this social account?",
+        "unlink_blocked_no_password": "You have no password set and no other linked account, so this can't be unlinked. Set a password first.",
+        "link_success": "Social account linked.",
+        "unlink_success": "Social account unlinked."
+    },
+    "notifications": {
+        "auto_linked": {
+            "name": "Social account auto-linked",
+            "description": "Sent when a social login is auto-linked to an existing account",
+            "subject": "[{app_name}] Your {provider_name} account was automatically linked",
+            "body": "<p>Hi {name},</p><p>A {provider_name} account ({provider_email}) was automatically linked to your {app_name} account. If this wasn't you, change your password immediately and unlink it from your profile page.</p>"
+        }
+    }
+}
