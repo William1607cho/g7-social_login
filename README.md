@@ -13,7 +13,7 @@ atozai.william-cho.com(그누보드7)에 카카오·구글 소셜 로그인을 �
 실제 로그인 E2E 테스트 대기.
 
 ## 레포명
-로컬 전용 (`Dev-Project/20260912-g7-social_login`), GitHub 공개 배포는 미정 (윌리엄 결정 대기)
+https://github.com/William1607cho/g7-social_login (2026-09-12 push 완료)
 
 ## 브랜치명
 main (feature 브랜치 없이 단일 브랜치로 개발 — 아직 비공개 초기 개발 단계)
@@ -143,3 +143,13 @@ main (feature 브랜치 없이 단일 브랜치로 개발 — 아직 비공개 �
 - **검증**: 연결된 브라우저로 `atozai.william-cho.com/login`을 직접 열어
   두 버튼 모두 아이콘 정상 렌더 확인(카카오 검은 말풍선, 구글 컬러 G
   로고+테두리). 확인 후 테스트용 활성화 상태는 다시 꺼둠.
+
+### 2026-09-12 (이어서) — GitHub 공개 저장소 push (직접 수행)
+- push 전 전체 커밋 이력(`git log --all -p`)에서 `.env`/`SECRETS.local.md`/
+  실제 시크릿 패턴 전수 스캔 — 발견 0건(테스트 중 사용한 임시 키값은 curl로
+  서버 API에만 보냈을 뿐 어떤 커밋에도 포함된 적 없음을 확인).
+  `git remote add origin https://github.com/William1607cho/g7-social_login.git`
+  등록 후 `git push -u origin main` — 커밋 8개, 브랜치 `main`(처음부터
+  이 저장소는 단일 main 브랜치로만 작업, 다른 g7-* 플러그인 저장소들과
+  동일 관례). 원격 `refs/heads/main`이 로컬 HEAD(`247e7e8`)와 일치함을
+  `git ls-remote`로 확인.
