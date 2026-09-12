@@ -9,6 +9,8 @@
         "guide_item_1": "카카오 개발자 콘솔 > 내 애플리케이션 > 카카오 로그인에서 REST API 키(Client ID)와 Client Secret을 발급받습니다.",
         "guide_item_2": "Google Cloud Console > API 및 서비스 > 사용자 인증 정보에서 OAuth 클라이언트 ID를 생성합니다.",
         "guide_item_3": "각 제공자를 켜기 전에는 로그인 화면에 버튼이 표시되지 않습니다.",
+        "kakao_section_title": "카카오",
+        "google_section_title": "Google",
         "kakao_enabled": { "label": "카카오 로그인 사용", "hint": "로그인 화면에 카카오 로그인 버튼을 표시합니다." },
         "kakao_client_id": { "label": "카카오 REST API 키", "hint": "카카오 개발자 콘솔의 REST API 키(앱 키)입니다." },
         "kakao_client_secret": { "label": "카카오 Client Secret", "hint": "카카오 로그인 > 보안에서 발급받은 Client Secret입니다." },

@@ -9,6 +9,8 @@
         "guide_item_1": "Kakao Developers > My Application > Kakao Login: issue a REST API key (Client ID) and a Client Secret.",
         "guide_item_2": "Google Cloud Console > APIs & Services > Credentials: create an OAuth client ID.",
         "guide_item_3": "The login button for a provider is hidden until that provider is turned on.",
+        "kakao_section_title": "Kakao",
+        "google_section_title": "Google",
         "kakao_enabled": { "label": "Enable Kakao login", "hint": "Show the Kakao login button on the login screen." },
         "kakao_client_id": { "label": "Kakao REST API key", "hint": "The REST API key (app key) from the Kakao developer console." },
         "kakao_client_secret": { "label": "Kakao Client Secret", "hint": "The Client Secret issued under Kakao Login > Security." },
