@@ -37,6 +37,37 @@ class Plugin extends AbstractPlugin
         ];
     }
 
+    /**
+     * 설정 저장 검증(UpdatePluginSettingsRequest)과 민감값 마스킹
+     * (PluginSettingsController::maskSensitive)이 이 스키마를 직접 참조한다 —
+     * config/settings/defaults.json의 frontend_schema만으로는 저장 경로가
+     * 채워지지 않는다(빈 스키마 → 검증 규칙 0개 → validated()가 모든 필드를
+     * 걸러내 저장 무동작, 값은 그대로인데 "성공" 응답만 오는 침묵 실패).
+     */
+    public function getSettingsSchema(): array
+    {
+        return [
+            'kakao_enabled' => ['type' => 'boolean'],
+            'kakao_client_id' => ['type' => 'string'],
+            'kakao_client_secret' => ['type' => 'string', 'sensitive' => true],
+            'google_enabled' => ['type' => 'boolean'],
+            'google_client_id' => ['type' => 'string'],
+            'google_client_secret' => ['type' => 'string', 'sensitive' => true],
+        ];
+    }
+
+    public function getConfigValues(): array
+    {
+        return [
+            'kakao_enabled' => false,
+            'kakao_client_id' => '',
+            'kakao_client_secret' => '',
+            'google_enabled' => false,
+            'google_client_id' => '',
+            'google_client_secret' => '',
+        ];
+    }
+
     public function getNotificationDefinitions(): array
     {
         return [
