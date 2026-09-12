@@ -60,3 +60,29 @@ main (feature 브랜치 없이 단일 브랜치로 개발 — 아직 비공개 �
   채널 각각 정상 발송, Redis 큐 비동기 처리 확인) 전부 정상 확인. 테스트 데이터 전량 정리 완료.
 - **미완**: 실제 카카오/구글 OAuth 왕복(개발자 콘솔 앱 등록 필요, 윌리엄 담당) E2E 테스트,
   실브라우저 로그인 화면 버튼 육안 확인, GitHub 공개 배포 여부/시점 결정.
+
+### 2026-09-12 (이어서) — 관리자 설정화면 404 수정 (직접 수행)
+- **원인**: `resources/layouts/admin/plugin_settings.json`에 다른 모든 배포된
+  플러그인(sirsoft-daum_postcode/gdpr/marketing/verification_kginicis/message_bizppurio
+  6종 전수 대조 확인)이 공통으로 갖는 top-level 필드 3개
+  (`layout_name: "plugin_settings"`, `permissions: ["core.plugins.update"]`,
+  `extends: "_admin_base"`)가 빠져 있었음. `docs/extension/plugin-development.md`의
+  "전체 예시: Daum 우편번호 플러그인" 스니펫을 그대로 따라 작성했는데, **그 문서
+  예시 자체가 이 3개 필드를 생략한 축약본**이었던 게 근본 원인 — 실제 배포된
+  daum_postcode 파일은 훨씬 풍부하고 이 필드들을 포함.
+  `layout_name` 누락 시 DB 시딩 로직이 자체적으로 이름을 지어 붙여
+  `g7-social_login.g7-social_login_admin_plugin_settings`로 등록됨(정상:
+  `g7-social_login.plugin_settings`) → 프론트가 정상 이름으로 조회 시 404.
+- **활성화 재시딩 여부**: 활성화(`plugin:activate`)는 실제로 레이아웃 등록을
+  수행함("1개 레이아웃 등록됨" 출력) — 시더 자체가 안 돈 게 아니라 **소스 파일이
+  잘못된 이름으로 등록되게 만들었을 뿐**. 재현/수정 둘 다 `plugin:refresh-layout
+  g7-social_login`(빌드 없이 JSON만 DB 재동기화)로 처리, 전체 deactivate→activate
+  불필요.
+- **수정+검증**: 누락 필드 3개 추가 → `plugin:refresh-layout` 실행(로그: 생성 1,
+  삭제 1 — 잘못된 이름 행 삭제, 올바른 이름 행 신규 생성) → DB에서
+  `g7-social_login.plugin_settings`로 정확히 등록됨 확인 → 실제 브라우저가 치는
+  것과 동일한 API(`/api/layouts/sirsoft-admin_basic/g7-social_login.plugin_settings.json`)
+  직접 호출로 최초 에러 문구("Layout not found: template_id=1,
+  name=g7-social_login.plugin_settings")를 그대로 재현한 뒤 200 정상 응답으로
+  전환 확인. 스키마 콘텐츠 자체는 `/api/admin/plugins/g7-social_login/settings/layout`
+  에서 정상 반환 확인(카카오/구글 6개 설정 필드 전부 포함).
