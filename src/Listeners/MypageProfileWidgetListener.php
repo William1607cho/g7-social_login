@@ -4,6 +4,7 @@ namespace Plugins\G7\SocialLogin\Listeners;
 
 use App\Contracts\Extension\HookListenerInterface;
 use Illuminate\Support\Facades\Log;
+use Plugins\G7\SocialLogin\Support\BrandIcons;
 
 /**
  * 마이페이지 프로필 화면(`mypage/profile`)에 "연동된 소셜 계정" 카드를
@@ -131,16 +132,30 @@ class MypageProfileWidgetListener implements HookListenerInterface
             'children' => [
                 [
                     'type' => 'basic', 'name' => 'Div',
+                    'props' => ['className' => 'flex items-center gap-3'],
                     'children' => [
                         [
-                            'type' => 'basic', 'name' => 'Span',
-                            'props' => ['className' => 'block text-sm font-medium text-gray-900 dark:text-white'],
-                            'text' => "\$t:g7-social_login.profile.{$provider}",
+                            'type' => 'basic', 'name' => 'Img',
+                            'props' => [
+                                'src' => $provider === 'kakao' ? BrandIcons::kakaoDataUri() : BrandIcons::googleDataUri(),
+                                'alt' => '',
+                                'className' => 'w-6 h-6 flex-shrink-0',
+                            ],
                         ],
                         [
-                            'type' => 'basic', 'name' => 'Span',
-                            'props' => ['className' => "{$isLinkedExpr} ? 'block text-xs text-green-600 dark:text-green-400' : 'block text-xs text-gray-400 dark:text-gray-500'"],
-                            'text' => "{{{$isLinkedExpr} ? \$t('g7-social_login.profile.linked') : \$t('g7-social_login.profile.not_linked')}}",
+                            'type' => 'basic', 'name' => 'Div',
+                            'children' => [
+                                [
+                                    'type' => 'basic', 'name' => 'Span',
+                                    'props' => ['className' => 'block text-sm font-medium text-gray-900 dark:text-white'],
+                                    'text' => "\$t:g7-social_login.profile.{$provider}",
+                                ],
+                                [
+                                    'type' => 'basic', 'name' => 'Span',
+                                    'props' => ['className' => "{$isLinkedExpr} ? 'block text-xs text-green-600 dark:text-green-400' : 'block text-xs text-gray-400 dark:text-gray-500'"],
+                                    'text' => "{{{$isLinkedExpr} ? \$t('g7-social_login.profile.linked') : \$t('g7-social_login.profile.not_linked')}}",
+                                ],
+                            ],
                         ],
                     ],
                 ],

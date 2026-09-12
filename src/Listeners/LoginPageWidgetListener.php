@@ -4,6 +4,7 @@ namespace Plugins\G7\SocialLogin\Listeners;
 
 use App\Contracts\Extension\HookListenerInterface;
 use Illuminate\Support\Facades\Log;
+use Plugins\G7\SocialLogin\Support\BrandIcons;
 
 /**
  * 로그인 화면(`auth/login`)에 카카오/구글 버튼 + 교환코드 처리 init_action 을
@@ -154,7 +155,22 @@ class LoginPageWidgetListener implements HookListenerInterface
                         'href' => "/api/plugins/g7-social_login/kakao/redirect?redirect={{encodeURIComponent(query.redirect ?? '/')}}",
                         'className' => 'w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium bg-[#FEE500] text-black/85 hover:opacity-90 transition-opacity',
                     ],
-                    'text' => '$t:g7-social_login.login.kakao_button',
+                    'children' => [
+                        [
+                            'type' => 'basic',
+                            'name' => 'Img',
+                            'props' => [
+                                'src' => BrandIcons::kakaoDataUri(),
+                                'alt' => '',
+                                'className' => 'w-5 h-5',
+                            ],
+                        ],
+                        [
+                            'type' => 'basic',
+                            'name' => 'Span',
+                            'text' => '$t:g7-social_login.login.kakao_button',
+                        ],
+                    ],
                 ],
                 [
                     'type' => 'basic',
@@ -164,7 +180,22 @@ class LoginPageWidgetListener implements HookListenerInterface
                         'href' => "/api/plugins/g7-social_login/google/redirect?redirect={{encodeURIComponent(query.redirect ?? '/')}}",
                         'className' => 'w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors',
                     ],
-                    'text' => '$t:g7-social_login.login.google_button',
+                    'children' => [
+                        [
+                            'type' => 'basic',
+                            'name' => 'Img',
+                            'props' => [
+                                'src' => BrandIcons::googleDataUri(),
+                                'alt' => '',
+                                'className' => 'w-5 h-5',
+                            ],
+                        ],
+                        [
+                            'type' => 'basic',
+                            'name' => 'Span',
+                            'text' => '$t:g7-social_login.login.google_button',
+                        ],
+                    ],
                 ],
             ],
         ];
