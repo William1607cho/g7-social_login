@@ -122,7 +122,12 @@ class MypageProfileWidgetListener implements HookListenerInterface
 
     private function buildProviderRow(string $provider): array
     {
-        $isLinkedExpr = '{{('.self::DATA_SOURCE_ID.".data?.linked_providers ?? []).includes('{$provider}')}}";
+        // 순수 불리언 표현식(중괄호 없음) — 사용처마다 필요한 형태로 직접 {{ }}로 감싼다.
+        // 미리 감싸두면 삼항식 등에 재사용할 때 {{ }} 가 중첩/분리되어 깨진 바인딩이 된다
+        // (실측: className/text/if 세 곳에서 이 문제로 상태 텍스트와 "연동하기" 버튼이
+        // 전혀 렌더되지 않는 침묵 실패가 있었음).
+        $isLinked = '('.self::DATA_SOURCE_ID.".data?.linked_providers ?? []).includes('{$provider}')";
+        $isLinkedExpr = "{{{$isLinked}}}";
         $enabledExpr = "{{_global.plugins?.['g7-social_login']?.{$provider}_enabled}}";
 
         return [
@@ -152,8 +157,8 @@ class MypageProfileWidgetListener implements HookListenerInterface
                                 ],
                                 [
                                     'type' => 'basic', 'name' => 'Span',
-                                    'props' => ['className' => "{$isLinkedExpr} ? 'block text-xs text-green-600 dark:text-green-400' : 'block text-xs text-gray-400 dark:text-gray-500'"],
-                                    'text' => "{{{$isLinkedExpr} ? \$t('g7-social_login.profile.linked') : \$t('g7-social_login.profile.not_linked')}}",
+                                    'props' => ['className' => "{{{$isLinked} ? 'block text-xs text-green-600 dark:text-green-400' : 'block text-xs text-gray-400 dark:text-gray-500'}}"],
+                                    'text' => "{{{$isLinked} ? \$t('g7-social_login.profile.linked') : \$t('g7-social_login.profile.not_linked')}}",
                                 ],
                             ],
                         ],
@@ -161,12 +166,12 @@ class MypageProfileWidgetListener implements HookListenerInterface
                 ],
                 [
                     'type' => 'basic', 'name' => 'Button',
-                    'if' => "{{!({$isLinkedExpr})}}",
+                    'if' => "{{!({$isLinked})}}",
                     'props' => [
                         'type' => 'button',
                         'className' => 'inline-flex items-center gap-2 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors',
                     ],
-                    'text' => '$t:g7-social_login.profile.link_button',
+                    'text' => "{{'(' + \$t('g7-social_login.profile.{$provider}') + ') ' + \$t('g7-social_login.profile.link_button')}}",
                     'actions' => [[
                         'type' => 'click',
                         'handler' => 'apiCall',
@@ -191,7 +196,7 @@ class MypageProfileWidgetListener implements HookListenerInterface
                         'type' => 'button',
                         'className' => 'inline-flex items-center gap-2 px-3 py-1.5 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors',
                     ],
-                    'text' => '$t:g7-social_login.profile.unlink_button',
+                    'text' => "{{'(' + \$t('g7-social_login.profile.{$provider}') + ') ' + \$t('g7-social_login.profile.unlink_button')}}",
                     'actions' => [[
                         'type' => 'click',
                         'handler' => 'apiCall',

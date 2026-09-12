@@ -24,7 +24,7 @@
         "divider": "or"
     },
     "profile": {
-        "section_title": "Linked social accounts",
+        "section_title": "Manage social login accounts",
         "kakao": "Kakao",
         "google": "Google",
         "linked": "Linked",

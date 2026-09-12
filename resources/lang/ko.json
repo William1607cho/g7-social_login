@@ -24,13 +24,13 @@
         "divider": "또는"
     },
     "profile": {
-        "section_title": "연동된 소셜 계정",
+        "section_title": "소셜로그인 계정 관리",
         "kakao": "카카오",
         "google": "Google",
         "linked": "연동됨",
         "not_linked": "연동 안 됨",
         "link_button": "연동하기",
-        "unlink_button": "연동 해제",
+        "unlink_button": "언링크하기",
         "unlink_confirm": "이 소셜 계정 연동을 해제하시겠습니까?",
         "unlink_blocked_no_password": "비밀번호가 설정되어 있지 않고 다른 연동 계정도 없어 해제할 수 없습니다. 먼저 비밀번호를 설정해주세요.",
         "link_success": "소셜 계정이 연동되었습니다.",
