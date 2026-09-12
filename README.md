@@ -86,3 +86,41 @@ main (feature 브랜치 없이 단일 브랜치로 개발 — 아직 비공개 �
   name=g7-social_login.plugin_settings")를 그대로 재현한 뒤 200 정상 응답으로
   전환 확인. 스키마 콘텐츠 자체는 `/api/admin/plugins/g7-social_login/settings/layout`
   에서 정상 반환 확인(카카오/구글 6개 설정 필드 전부 포함).
+
+### 2026-09-12 (이어서) — 설정화면 빈 화면 수정 (직접 수행)
+- 404는 고쳤지만 화면 콘텐츠가 완전히 비어 보이는 2차 문제 발견. 원인:
+  `docs/extension/plugin-development.md`의 "간소화 버전"(`schema` 키만
+  정의하면 UI 자동생성)은 프론트/백엔드 어디에도 구현 안 된 문서상의 기능.
+  `App\Services\LayoutService::mergeLayouts()`가 병합 대상 키를 명시적
+  화이트리스트로 고르는데 `pageConfig`/`schema`는 그 목록에 없어 조용히
+  버려지고, `_admin_base.json`의 콘텐츠 슬롯은 `slots.content`가 없으면
+  `children: []`로 남아 에러 없이 아무것도 안 그림.
+- 실제 배포된 모든 플러그인이 쓰는 방식대로 `slots.content`에 PageHeader/
+  알림배너/폼필드(`dataKey`+`trackChanges` 자동바인딩)/가이드/저장버튼을
+  명시적으로 작성하는 "커스텀 레이아웃" 방식으로 전면 재작성. API 응답으로
+  content 트리에 필드 노드들이 실제로 채워짐을 확인(kakao_section,
+  save_button 등 존재 확인).
+
+### 2026-09-12 (이어서) — 설정 저장 무동작 수정 (직접 수행)
+- **증상**: 저장 버튼 클릭 시 "성공" 메시지는 뜨지만 체크박스뿐 아니라 텍스트
+  필드까지 전부 저장 안 되고 그대로 되돌아옴.
+- **원인**: `UpdatePluginSettingsRequest::rules()`가 `$plugin->getSettingsSchema()`
+  를 검증 규칙의 유일한 소스로 씀. `plugin.php`가 이 메서드를 오버라이드하지
+  않아 `AbstractPlugin` 기본값(빈 배열)이 나감 → 검증 규칙 0개 →
+  `$request->validated()`가 제출 필드를 전부 걸러냄 → `save()`에는 빈 배열이
+  전달돼 기존 값 그대로 재기록(파일 쓰기는 성공하니 "성공" 메시지만 뜸).
+  `config/settings/defaults.json`은 설치 시점 초기 시딩 + 프론트 노출
+  (`frontend_schema`)에만 쓰이고, 저장/조회 시 검증·민감값 마스킹 경로는
+  `plugin.php`의 PHP 메서드(`getSettingsSchema`/`getConfigValues`)를 별도로
+  참조한다는 걸 놓쳤던 게 근본 원인 — 두 메커니즘이 독립적임.
+- **부수 발견**: 스키마가 비면 `encryptSensitiveFields`/`decryptSensitiveFields`/
+  `SensitiveSettingMask::stripUnchanged`가 전부 no-op라 민감 필드가 평문
+  저장되고, 마스크 값(`••••••••`) 재제출 시 실제 비밀값을 덮어쓸 수 있는
+  잠재 결함도 같이 있었음 — 이번 수정으로 함께 해소(그때까지 저장된 실제
+  시크릿이 없어 데이터 유실은 없었음).
+- **수정+검증**: `plugin.php`에 `getSettingsSchema()`/`getConfigValues()` 추가.
+  직접 PUT/GET으로 재현: 수정 전(체크박스+텍스트 필드 전부 무저장) →
+  수정 후(전부 정상 저장·조회, 시크릿 암호화 확인 `storage/app/plugins/
+  g7-social_login/settings/setting.json`에서 암호문 형태 확인) → 로그인
+  페이지 실제 HTML(`G7Config.plugins`)에 `kakao_enabled:true`가 즉시
+  반영됨까지 확인 후 테스트값은 초기화(전부 false/빈값)로 되돌림.
