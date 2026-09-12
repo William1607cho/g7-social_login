@@ -124,3 +124,22 @@ main (feature 브랜치 없이 단일 브랜치로 개발 — 아직 비공개 �
   g7-social_login/settings/setting.json`에서 암호문 형태 확인) → 로그인
   페이지 실제 HTML(`G7Config.plugins`)에 `kakao_enabled:true`가 즉시
   반영됨까지 확인 후 테스트값은 초기화(전부 false/빈값)로 되돌림.
+
+### 2026-09-12 (이어서) — 카카오/구글 공식 브랜드 아이콘 적용 (직접 수행)
+- **구글**: `developers.google.com/identity/branding-guidelines` 공식 배포
+  ZIP(`signin-assets.zip`, 인증 불필요 공개 다운로드)에서 Android+Web
+  PNG @2x, Theme=Light, Show text=No, Shape=Square 선택 — 흰 배경+테두리+
+  컬러 G 로고, 텍스트 미포함 아이콘 전용 에셋을 **무변경(바이트 그대로)**
+  사용.
+- **카카오**: `developers.kakao.com/tool/resource/login`(공개, 로그인
+  불필요 — 연결된 브라우저로 직접 확인)의 "완성형" 탭, 버튼 크기 Large+
+  너비 Large 조합에서 노출되는 공식 PNG(`kakao_login_large_wide.png`,
+  600x90)에서 말풍선 심볼 영역만 크롭 후 배경(#FEE500)을 투명 처리.
+  **심볼 형태·비율은 원본 픽셀 그대로(재작도 없음)** — 이 도구 페이지에는
+  심볼 단독 다운로드가 없어 부득이 크롭 방식 사용.
+- `src/Support/BrandIcons.php` 신설(두 PNG를 런타임에 base64 data URI로
+  인코딩, 별도 정적 자산 라우트 불필요 — 이 플러그인은 프론트 JS 번들이
+  없음). 로그인 화면 버튼과 마이페이지 연동 행 양쪽에 동일 아이콘 적용.
+- **검증**: 연결된 브라우저로 `atozai.william-cho.com/login`을 직접 열어
+  두 버튼 모두 아이콘 정상 렌더 확인(카카오 검은 말풍선, 구글 컬러 G
+  로고+테두리). 확인 후 테스트용 활성화 상태는 다시 꺼둠.
