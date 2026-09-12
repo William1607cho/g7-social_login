@@ -1,5 +1,10 @@
 {
     "version": "1.0.0",
+    "layout_name": "plugin_settings",
+    "permissions": [
+        "core.plugins.update"
+    ],
+    "extends": "_admin_base",
     "meta": {
         "title": "$t:settings.page_title",
         "description": "$t:settings.page_description"
