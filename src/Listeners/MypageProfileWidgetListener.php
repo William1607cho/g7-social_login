@@ -176,7 +176,7 @@ class MypageProfileWidgetListener implements HookListenerInterface
                         'type' => 'click',
                         'handler' => 'apiCall',
                         'auth_required' => true,
-                        'target' => "/plugins/g7-social_login/{$provider}/link/prepare",
+                        'target' => "/api/plugins/g7-social_login/{$provider}/link/prepare",
                         'params' => ['method' => 'POST'],
                         'onSuccess' => [[
                             'handler' => 'openWindow',
@@ -201,7 +201,7 @@ class MypageProfileWidgetListener implements HookListenerInterface
                         'type' => 'click',
                         'handler' => 'apiCall',
                         'auth_required' => true,
-                        'target' => "/plugins/g7-social_login/{$provider}/unlink",
+                        'target' => "/api/plugins/g7-social_login/{$provider}/unlink",
                         'params' => ['method' => 'DELETE'],
                         'confirm' => '$t:g7-social_login.profile.unlink_confirm',
                         'onSuccess' => [

@@ -216,7 +216,7 @@ class LoginPageWidgetListener implements HookListenerInterface
             'actions' => [
                 [
                     'handler' => 'apiCall',
-                    'target' => '/plugins/g7-social_login/exchange',
+                    'target' => '/api/plugins/g7-social_login/exchange',
                     'params' => [
                         'method' => 'POST',
                         'body' => ['code' => '{{query.social_exchange}}'],
