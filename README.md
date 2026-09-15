@@ -9,8 +9,8 @@ atozai.william-cho.com(그누보드7)에 카카오·구글 소셜 로그인을 �
 2026-09-12
 
 ## 상태
-진행중 — 코드 구현·설치·기능 테스트 완료. 카카오/구글 개발자 콘솔 앱 등록(윌리엄) 및
-실제 로그인 E2E 테스트 대기.
+진행중 — 카카오 실로그인 E2E 완료(2026-09-15, blog.william-cho.com). 구글은 OAuth 클라이언트
+등록(윌리엄) 후 실로그인 E2E 대기. atozai 설치본은 9/15 수정 미반영.
 
 ## 레포명
 https://github.com/William1607cho/g7-social_login (2026-09-12 push 완료)
@@ -197,3 +197,65 @@ main (feature 브랜치 없이 단일 브랜치로 개발 — 아직 비공개 �
   `POST /api/plugins/g7-social_login/kakao/link/prepare`,
   `DELETE .../kakao/unlink` 둘 다 200 확인. 테스트 데이터 정리, GitHub
   push 완료(`4899557`).
+
+### 2026-09-15 — 카카오 로그인 진입 500 + 로그인 완료 불가 수정, 실로그인 E2E 완료 (직접 수행)
+대상: blog.william-cho.com 신규 설치본(카카오 비즈앱·REST 키·Redirect URI·이메일 동의항목 설정 직후).
+- **증상**: ① 로그인 화면 카카오 버튼 클릭 시 자체 500 페이지. 주소창은
+  `.../kakao/redirect?redirect={{encodeURIComponent(query.redirect ?? '/')}}` (표현식 원문).
+  ② 500 수정 후 카카오 동의→콜백까지 성공했으나 `/login?social_exchange=...` 에서 로그인
+  화면이 그대로 다시 뜸. ③ 그 수정 후 홈으로 이동은 되나 새로고침 전까지 비로그인으로 표시.
+- **원인** (전부 코드·로그로 확정, 추측 없음):
+  - ① 500 = `redirect` 파라미터와 무관. laravel.log 예외
+    `BindingResolutionException: Target [Laravel\Socialite\Contracts\Factory] is not instantiable`
+    (`SocialAuthService::driverFor` 의 `Socialite::buildProvider`). socialite 가 플러그인 자체
+    vendor 에 있어 코어 패키지 auto-discovery 대상이 아니므로 `SocialiteServiceProvider` 미등록 →
+    파사드 해석 실패. 컨트롤러는 `RuntimeException` 만 잡아 500. 그 다음 단계에 잠복 결함 하나 더:
+    import 한 `SocialiteProviders\Kakao\Provider` 는 존재하지 않는 클래스(실제 `KakaoProvider`).
+    9/12 tinker 테스트는 redirect 경로를 실행하지 않아 둘 다 못 잡음.
+  - 주소창 원문 = 코어 `SafeExpressionEvaluator` 가 `encodeURIComponent` 를 호출하지 못해 예외 →
+    `DataBindingEngine.resolveBindings` 가 catch 후 `{{ }}` 원문 반환(침묵 실패).
+  - ② = 코어 `TemplateApp::executeInitActions` 가 init action 을 ActionDefinition 으로 옮길 때
+    `actions` 필드를 복사하지 않음 → `sequence` 가 빈 배열로 조용히 종료 → `POST /exchange` 미호출
+    (접근 로그로 확인). 9/13 의 `/api` 접두사 수정 때도 트리거된 적 없던 잠재 버그.
+  - ③ = 코어 `AuthManager.isAuthenticated` 는 `login` 핸들러의 private `establishSession` 또는 부팅
+    `preloadAuth` 로만 true. SPA `navigate` 후엔 false 로 남아 `DataSourceManager` 가
+    `auth_required` 데이터소스(`current_user`)를 건너뛰고 fallback 으로 `_global.currentUser` 를 덮어씀.
+  - 부가: `redirect` 쿼리 무검증 → 세션 → 콜백 URL → 프론트 `navigate` 로 흘러가는 오픈 리다이렉트 표면.
+- **코어 표현식 파서 실제 지원 범위** (`SafeExpressionEvaluator.ts` 구현 + 원본 파일을 node 로 직접
+  실행 + 배포 번들 `template-engine.min.js` 대조로 확정):
+  - `??` / `?.` / 삼항 / `.includes()` / 화살표함수(구조분해 파라미터) / `typeof` / `Object.entries` 지원.
+  - 호출 가능한 전역은 `WHITELIST_GLOBALS` 뿐: `Math JSON Date Array Object(일부) Number String Boolean
+    Set Map WeakSet WeakMap parseInt parseFloat isNaN isFinite`. **`encodeURIComponent`/`encodeURI`/
+    `decodeURIComponent` 호출 불가**(`DataBindingEngine.extractVariablesFromExpression` 예약어 목록엔
+    이름이 있어 헷갈리지만 평가기엔 없음 → `Attempted to call a non-function value`).
+  - `query` 는 레이아웃 렌더·initActions 컨텍스트 모두에 바인딩됨(`TemplateApp` initialDataContext).
+  - 평가 실패 시 에러 토스트 없이 `{{ }}` 원문을 그대로 출력.
+  - 플러그인이 만드는 나머지 표현식 30개(마이페이지 위젯·관리자 설정 JSON 포함) 전수 평가 → 실패는
+    `encodeURIComponent` 2건뿐.
+  - initActions 에서 `sequence`+`actions` 는 동작하지 않음 — 핸들러를 직접 둘 것(코어 레이아웃도 동일 패턴).
+- **수정** (코어 무변경, 커밋 `24431ec` `55f118f` `cd19d39`):
+  - `SocialiteManager` 를 `new SocialiteManager(app())` 로 직접 생성(파사드 제거), `KakaoProvider`
+    클래스명 수정. provider 조립의 `Throwable` 도 500 대신 `/login?social_error=provider_unavailable`.
+  - 로그인 카카오/구글 버튼 href 를 파라미터 없는 고정 경로로.
+  - `Support/RedirectPath::sanitize` 신설: 단일 `/` 로 시작하는 내부 상대경로만 허용. `//host`, `/\host`,
+    스킴/호스트 포함 URL, 역슬래시·제어문자·공백, `{{`/`}}`, `/login`, `/api/*` 는 전부 `/` 로 조용히
+    폴백. 진입(redirect)·콜백·교환 응답 3단계 모두 적용. 돌아갈 경로는 URL 대신 교환코드 캐시에
+    담아 exchange 응답 `redirect_path` 로만 전달(프론트가 쿼리스트링을 읽지 않음).
+  - 교환 init action 을 `apiCall` 직접 호출로 변경.
+  - 교환 성공 후 `saveToLocalStorage` → `openWindow(_self)`(전체 이동)로 부팅 `preloadAuth` 가 인증
+    상태를 복원하게 함. 전체 이동이라 로그인 성공 토스트는 제거.
+- **검증**:
+  - 서빙 레이아웃(`/api/layouts/wc-community/auth/login.json`)에서 href 가 고정 경로로 렌더됨 확인
+    (반영에 `template:cache-clear` 필요, 브라우저는 레이아웃 JSON `max-age=3600` 이라 기존 창은 구버전 사용).
+  - redirect 파라미터 없음 / `//example.com` / `https://example.com` / `{{foo}}` / 표현식 원문 5케이스
+    전부 500 없이 `kauth.kakao.com` 302. sanitize 단위 15케이스(`/board/free?page=2#c` 통과 등) 기대대로.
+  - 공개 도메인 기준 `redirect_uri=https://blog.william-cho.com/api/plugins/g7-social_login/kakao/callback`
+    — 카카오 실왕복 성공(불일치면 카카오가 거부)으로 콘솔 등록값과 일치 확인.
+  - 가짜 콜백(code/state 위조) → `/login?social_error=oauth_failed` 302, 가짜 교환코드 → 422.
+  - 윌리엄 실브라우저(시크릿 창) 카카오 로그인 E2E: redirect 302 → 콜백 302 → `POST /exchange` 200 →
+    `GET /api/auth/user` 200, 홈에서 새로고침 없이 로그인 상태 확인.
+  - 구글: client_id 미설정 상태라 `/login?social_error=provider_unavailable` 폴백만 확인(실로그인 미검증).
+  - 테스트 데이터 정리: E2E 로 생성된 user 2 와 연동 1·플래그 1·토큰 6·활동로그 2 삭제.
+- **남은 것 / 별건**: atozai 설치본에 동일 결함 3종 미반영. 플러그인 vendor 의 `illuminate/*` v12.69.2 가
+  prepend 오토로더로 코어 v12.69.1 클래스를 사이트 전체에서 가리는 문제 확인(별도 작업으로 분리).
+  구글 실로그인 E2E.
