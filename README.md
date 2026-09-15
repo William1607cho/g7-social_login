@@ -309,5 +309,8 @@ main (feature 브랜치 없이 단일 브랜치로 개발 — 아직 비공개 �
   - 교체 후 접근로그 341요청 중 5xx 0, `laravel.log` 신규 항목 0.
   - 브라우저 콘솔 에러 0: 홈, 게시판 목록, 관리자 대시보드, 관리자 플러그인 목록·설정(global-font·superpack·social_login).
   - queue 워커: 재시작 순간(구 워커 종료 중) 삭제된 `psr/log` 경로 include 실패 1회 기록 후 신규 워커 정상.
-  - 카카오 실로그인 E2E: (확인 중)
+  - 카카오 실로그인 E2E(윌리엄 시크릿 창, 교체 후): `redirect` 302(03:32:31 UTC) → `callback` 302 → `exchange` 200 →
+    `/api/auth/user` 200, 교체 전과 동일 순서. 생성된 회원(user 3)·카카오 연동은 blog 회원 계정 삭제·수정 금지
+    방침에 따라 조회만 하고 유지(정리하지 않음).
+  - 교체 전 vendor 는 삭제하지 않고 `gnuboard7-blog/backups/` 로 이동 보관(tar 스냅샷과 별도).
   - 글 상세 페이지·forum-addon 리액션/채택/잠금·comment-editor 댓글 입력은 blog 에 게시글 0건이라 윌리엄 결정으로 생략.
