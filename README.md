@@ -12,6 +12,17 @@ atozai.william-cho.com(그누보드7)에 카카오·구글 소셜 로그인을 �
 진행중 — 카카오 실로그인 E2E 완료(2026-09-15, blog.william-cho.com). 구글은 OAuth 클라이언트
 등록(윌리엄) 후 실로그인 E2E 대기. atozai 설치본은 9/15 수정 미반영.
 
+## 유지보수 주의사항
+- **코어가 Laravel 메이저 버전을 올리면 socialite(및 socialiteproviders/manager) 버전도 함께 올려야 한다.**
+  `composer.json` 의 `replace` 는 코어와 겹치는 패키지(illuminate/*, guzzlehttp/*, symfony/*, psr/*,
+  nesbot/carbon 등 47개)를 플러그인 vendor 에 받지 않게 막을 뿐 호환성을 보장하지 않는다. 런타임에는
+  코어가 로드한 버전을 쓰므로, 코어 업그레이드 후 socialite 의 require 제약(현재 illuminate ^6~^13,
+  manager 는 ^11~^13, guzzle ^6~^8)을 벗어나면 로그인 진입에서 깨진다. 코어 업그레이드 시
+  `composer.json` 의 replace 목록도 코어 vendor 와 다시 대조할 것(새로 겹치는 패키지 추가).
+- vendor 재생성은 blog 앱 컨테이너 안에서(호스트엔 php/composer 없음) 스테이징 디렉터리에 먼저
+  `composer update --no-dev` 후 교체하고, 교체 직후 `queue:work`·`reverb:start` 컨테이너를 재시작한다
+  (구 오토로더 classmap 을 메모리에 들고 있어 삭제된 경로를 include 하다 죽음).
+
 ## 레포명
 https://github.com/William1607cho/g7-social_login (2026-09-12 push 완료)
 
@@ -259,3 +270,44 @@ main (feature 브랜치 없이 단일 브랜치로 개발 — 아직 비공개 �
 - **남은 것 / 별건**: atozai 설치본에 동일 결함 3종 미반영. 플러그인 vendor 의 `illuminate/*` v12.69.2 가
   prepend 오토로더로 코어 v12.69.1 클래스를 사이트 전체에서 가리는 문제 확인(별도 작업으로 분리).
   구글 실로그인 E2E.
+
+### 2026-09-15 (이어서) — vendor 중복 패키지 제거(replace), 사이트 전역 클래스 가림 해소 (직접 수행)
+대상: blog.william-cho.com 설치본(atozai 미반영).
+- **증상**: 플러그인 자체 vendor(24M, 55패키지)의 Laravel·Symfony·Guzzle·Carbon·PSR 사본이 코어 클래스를
+  사이트 전체에서 대신 로드. 교체 전 런타임 확인 결과 `Illuminate\Support\Str`, `Illuminate\Http\Request`,
+  `StartSession`, `Facade`, `Collection`, `Carbon\Carbon`, `GuzzleHttp\Client`,
+  `Symfony\...\HttpFoundation\Request`, `Psr\Log\LoggerInterface` 가 **전부** `plugins/g7-social_login/vendor/` 에서 로드됨.
+- **원인**: `laravel/socialite` 설치 시 composer 가 의존성으로 `illuminate/*` 등을 함께 받음(플러그인별 독립 vendor 라
+  호스트 앱 보유 여부를 모름). 로딩 순서(구현 확인): `public/index.php`/`artisan` 이 코어 `vendor/autoload.php` 를
+  먼저 로드 → `bootstrap/cache/autoload-extensions.php` 의 `vendor_autoloads` 를 `require_once` → 두 오토로더 모두
+  `ClassLoader::register(true)`(prepend) 라 **나중에 올라간 플러그인 로더가 SPL 스택 맨 앞**에서 이김.
+- **중복 패키지 대조**(코어 installed.json + laravel/framework 의 replace 목록 vs 플러그인 installed.json):
+  교집합 47개. 버전 차이는 `illuminate/*` 9종(코어 v12.69.1 / 플러그인 v12.69.2, 패치), `nesbot/carbon`
+  (3.13.2 / 3.14.0, 마이너) 뿐, 나머지 37개(guzzlehttp 4 · symfony 18 · psr 8 · doctrine/inflector ·
+  carbonphp/carbon-doctrine-types · fruitcake/php-cors · ralouphie/getallheaders · voku/portable-ascii 등) 동일 버전.
+  플러그인 전용 8개: laravel/socialite v5.31.0, socialiteproviders/manager 4.9.2, socialiteproviders/kakao 4.3.0,
+  league/oauth1-client v1.11.0, firebase/php-jwt, phpseclib/phpseclib 4.0.1, paragonie/constant_time_encoding v3.1.3,
+  symfony/polyfill-php82 v1.38.1.
+- **판정**: 교집합 47개 전부 replace. 코어가 제공하고 버전 차이가 패치/마이너뿐이며, 원래 코어가 테스트된
+  버전으로 되돌리는 방향. "크게 어긋나 보류"한 항목 없음. 플러그인 전용 8개는 코어에 없어 vendor 유지
+  (polyfill-php82 는 PHP 8.2.33 에서 no-op). 남는 8개의 require 중 코어 패키지를 가리키는 제약을 코어 설치
+  버전으로 `composer/semver` 대조 → socialite(guzzle ^6|^7|^8 ← 7.15.5, illuminate/contracts·http·support
+  ^6~^13 ← 12.69.1), manager(illuminate/support ^11~^13 ← 12.69.1), oauth1-client(guzzle ^6|^7 ← 7.15.5,
+  guzzlehttp/psr7 ^1.7|^2 ← 2.13.1) 전부 충족, 비호환 0.
+- **수정**: `composer.json` 에 `replace` 47개 추가. 교체 전 스냅샷 `gnuboard7-blog/backups/g7-social_login-vendor-before-replace-20260915.tar.gz`
+  (vendor+composer.json+lock). 컨테이너 스테이징(`/tmp/g7sl-build`)에서 `composer update --no-dev` → 8개만 설치 확인 →
+  `vendor.new` 복사 후 rename 교체(사이트가 vendor 없이 도는 공백 없음) → `gb7_blog_queue`·`gb7_blog_reverb` 재시작.
+  vendor 24M(파일 3,245) → 5.1M(파일 695). `vendor-bundle.zip` 은 `_bundled/{id}` 기준 메커니즘이고 이 플러그인은 `_bundled`
+  사본이 없어 해당 없음(갱신 생략).
+- **검증**:
+  - 교체 후 새 프로세스에서 위 클래스 전부 `vendor/laravel/framework/...`·`vendor/nesbot/...` 등 **코어 vendor** 에서
+    로드, 플러그인 vendor 에서는 socialite·KakaoProvider·플러그인 src 만 로드.
+  - HTTP 회귀(공개 도메인, 교체 전후 동일 스크립트): 페이지(`/`·`/login`·`/admin`·게시판 목록)와 레이아웃 JSON
+    (home·login·mypage·board index/show — forum-addon·webzine-addon 주입 포함) 크기 바이트 동일, global-font
+    `font.css`·플러그인 `bundle.js`(comment-editor·superpack 프론트)·superpack `link-preview`·home-widgets 동일.
+    board/easy-topmenu 응답 크기 증가는 같은 시간 다른 세션의 게시판 32개 생성 때문(구조 동일, 200).
+  - 교체 후 접근로그 341요청 중 5xx 0, `laravel.log` 신규 항목 0.
+  - 브라우저 콘솔 에러 0: 홈, 게시판 목록, 관리자 대시보드, 관리자 플러그인 목록·설정(global-font·superpack·social_login).
+  - queue 워커: 재시작 순간(구 워커 종료 중) 삭제된 `psr/log` 경로 include 실패 1회 기록 후 신규 워커 정상.
+  - 카카오 실로그인 E2E: (확인 중)
+  - 글 상세 페이지·forum-addon 리액션/채택/잠금·comment-editor 댓글 입력은 blog 에 게시글 0건이라 윌리엄 결정으로 생략.
