@@ -229,17 +229,16 @@ class LoginPageWidgetListener implements HookListenerInterface
                     'params' => ['key' => 'auth_token', 'value' => '{{response.token}}'],
                 ],
                 [
-                    'handler' => 'setState',
-                    'params' => ['target' => 'global', 'currentUser' => '{{response.data}}'],
-                ],
-                [
-                    'handler' => 'toast',
-                    'params' => ['type' => 'success', 'message' => '$t:auth.login_success'],
-                ],
-                [
-                    'handler' => 'navigate',
+                    // SPA navigate 가 아니라 전체 이동(window.location.assign)이어야 한다.
+                    // 코어 AuthManager 의 인증 상태(isAuthenticated)는 `login` 핸들러 내부의 private
+                    // establishSession 또는 부팅 시 preloadAuth 로만 켜진다. navigate 로 이동하면
+                    // 상태가 false 로 남아 DataSourceManager 가 auth_required 데이터소스(current_user)를
+                    // 건너뛰고 fallback 으로 _global.currentUser 를 덮어써, 새로고침 전까지 비로그인처럼
+                    // 보였다(실측). 전체 이동은 부팅 preloadAuth 를 거쳐 저장된 토큰으로 상태를 복원한다.
+                    'handler' => 'openWindow',
                     // 서버가 검증한 값만 쓴다(쿼리스트링의 redirect 는 읽지 않음).
-                    'params' => ['path' => '{{response.redirect_path ?? \'/\'}}'],
+                    'target' => '{{response.redirect_path ?? \'/\'}}',
+                    'params' => ['target' => '_self'],
                 ],
             ],
             'onError' => [
