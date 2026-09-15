@@ -152,7 +152,9 @@ class LoginPageWidgetListener implements HookListenerInterface
                     'name' => 'A',
                     'if' => "{{_global.plugins?.['g7-social_login']?.kakao_enabled}}",
                     'props' => [
-                        'href' => "/api/plugins/g7-social_login/kakao/redirect?redirect={{encodeURIComponent(query.redirect ?? '/')}}",
+                        // 고정 경로 — g7 표현식 평가기(SafeExpressionEvaluator)는 encodeURIComponent 등
+                        // 화이트리스트 밖 전역 함수를 호출하지 못하고, 실패 시 {{ }} 원문을 그대로 흘린다.
+                        'href' => '/api/plugins/g7-social_login/kakao/redirect',
                         'className' => 'w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium bg-[#FEE500] text-black/85 hover:opacity-90 transition-opacity',
                     ],
                     'children' => [
@@ -177,7 +179,7 @@ class LoginPageWidgetListener implements HookListenerInterface
                     'name' => 'A',
                     'if' => "{{_global.plugins?.['g7-social_login']?.google_enabled}}",
                     'props' => [
-                        'href' => "/api/plugins/g7-social_login/google/redirect?redirect={{encodeURIComponent(query.redirect ?? '/')}}",
+                        'href' => '/api/plugins/g7-social_login/google/redirect',
                         'className' => 'w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors',
                     ],
                     'children' => [
@@ -236,7 +238,8 @@ class LoginPageWidgetListener implements HookListenerInterface
                         ],
                         [
                             'handler' => 'navigate',
-                            'params' => ['path' => '{{query.redirect ?? \'/\'}}'],
+                            // 서버가 검증한 값만 쓴다(쿼리스트링의 redirect 는 읽지 않음).
+                            'params' => ['path' => '{{response.redirect_path ?? \'/\'}}'],
                         ],
                     ],
                     'onError' => [

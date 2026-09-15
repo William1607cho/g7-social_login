@@ -10,20 +10,25 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
-use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\SocialiteManager;
 use Laravel\Socialite\Two\GoogleProvider;
 use Plugins\G7\SocialLogin\Models\SocialAccount;
 use Plugins\G7\SocialLogin\Models\SocialLoginLinkNonce;
 use Plugins\G7\SocialLogin\Models\SocialLoginUserFlag;
-use SocialiteProviders\Kakao\Provider as KakaoProvider;
+use Plugins\G7\SocialLogin\Support\RedirectPath;
+use SocialiteProviders\Kakao\KakaoProvider;
 
 /**
  * 카카오/구글 OAuth 로직 전담 서비스.
  *
- * `Socialite::buildProvider()` 로 provider 인스턴스를 직접 조립한다 — 플러그인
+ * `SocialiteManager::buildProvider()` 로 provider 인스턴스를 직접 조립한다 — 플러그인
  * 설정(DB)에 저장된 client_id/secret 을 코어 `config/services.php` 에 쓰지 않고
  * 그대로 넘길 수 있어, 코어 설정 파일을 건드리지 않고도(플러그인 격리 원칙) 동적
  * 앱 키 교체가 즉시 반영된다.
+ *
+ * `Socialite` 파사드는 쓰지 않는다 — socialite 는 플러그인 자체 vendor 에 있어 코어의
+ * 패키지 auto-discovery 대상이 아니므로 `SocialiteServiceProvider` 가 등록되지 않고,
+ * 파사드 해석 시 `Contracts\Factory is not instantiable` 로 500 이 난다(실측).
  */
 class SocialAuthService
 {
@@ -73,7 +78,7 @@ class SocialAuthService
         $providerClass = $provider === 'kakao' ? KakaoProvider::class : GoogleProvider::class;
 
         /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
-        $driver = Socialite::buildProvider($providerClass, $config);
+        $driver = (new SocialiteManager(app()))->buildProvider($providerClass, $config);
 
         return $driver;
     }
@@ -84,7 +89,7 @@ class SocialAuthService
      * 브라우저 전체이동(OAuth 콜백 리다이렉트)에는 Authorization 헤더를 실을 수
      * 없으므로, 토큰 자체를 URL 에 노출하는 대신 짧은 1회용 코드만 넘긴다.
      */
-    public function issueExchangeCode(User $user): string
+    public function issueExchangeCode(User $user, string $redirectPath = RedirectPath::FALLBACK): string
     {
         // 코어 로그인(AuthService::login)과 동일한 만료 정책을 따른다.
         $lifetime = (int) g7_core_settings('security.auth_token_lifetime', 30);
@@ -96,13 +101,14 @@ class SocialAuthService
         Cache::put("g7sl:exchange:{$code}", [
             'token' => $token,
             'user_id' => $user->id,
+            'redirect_path' => RedirectPath::sanitize($redirectPath),
         ], now()->addSeconds(self::EXCHANGE_TTL));
 
         return $code;
     }
 
     /**
-     * @return array{token: string, user: User}|null
+     * @return array{token: string, user: User, redirect_path: string}|null
      */
     public function consumeExchangeCode(string $code): ?array
     {
@@ -121,7 +127,11 @@ class SocialAuthService
             return null;
         }
 
-        return ['token' => $payload['token'], 'user' => $user];
+        return [
+            'token' => $payload['token'],
+            'user' => $user,
+            'redirect_path' => RedirectPath::sanitize($payload['redirect_path'] ?? null),
+        ];
     }
 
     public function createLinkNonce(User $user, string $provider): string

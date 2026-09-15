@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Plugins\G7\SocialLogin\Models\SocialAccount;
 use Plugins\G7\SocialLogin\Services\SocialAuthService;
+use Plugins\G7\SocialLogin\Support\RedirectPath;
 
 class SocialAuthController extends Controller
 {
@@ -26,9 +27,14 @@ class SocialAuthController extends Controller
             $driver = $this->service->driverFor($provider);
         } catch (\RuntimeException $e) {
             return $this->frontendLoginError('provider_unavailable');
+        } catch (\Throwable $e) {
+            // provider 조립 자체의 실패(클래스/바인딩 누락 등)도 500 대신 로그인 화면 오류로 돌려보낸다.
+            Log::error('g7-social_login: OAuth provider 조립 실패', ['provider' => $provider, 'exception' => get_class($e), 'error' => $e->getMessage()]);
+
+            return $this->frontendLoginError('provider_unavailable');
         }
 
-        $request->session()->put(self::SESSION_REDIRECT, (string) $request->query('redirect', '/'));
+        $request->session()->put(self::SESSION_REDIRECT, RedirectPath::sanitize($request->query('redirect')));
 
         $linkNonce = $request->query('link_nonce');
         if (is_string($linkNonce) && $linkNonce !== '') {
@@ -42,7 +48,8 @@ class SocialAuthController extends Controller
 
     public function callback(Request $request, string $provider): RedirectResponse
     {
-        $redirectAfter = (string) $request->session()->pull(self::SESSION_REDIRECT, '/');
+        // 진입 시 이미 검증했지만 세션 값을 그대로 믿지 않고 콜백에서도 다시 검증한다.
+        $redirectAfter = RedirectPath::sanitize($request->session()->pull(self::SESSION_REDIRECT));
         $linkNonce = $request->session()->pull(self::SESSION_LINK_NONCE);
 
         try {
@@ -68,11 +75,12 @@ class SocialAuthController extends Controller
             return $this->frontendLoginError($key);
         }
 
-        $code = $this->service->issueExchangeCode($result['user']);
+        // 돌아갈 경로는 URL 에 싣지 않고 교환코드 캐시에 담는다 — 프론트가 쿼리스트링을
+        // 읽어 이동 경로를 정하면 검증을 우회한 오픈 리다이렉트 표면이 생긴다.
+        $code = $this->service->issueExchangeCode($result['user'], $redirectAfter);
 
         return redirect('/login?'.http_build_query([
             'social_exchange' => $code,
-            'redirect' => $redirectAfter,
         ]));
     }
 
@@ -116,6 +124,7 @@ class SocialAuthController extends Controller
             'message' => __('auth.login_success'),
             'data' => (new UserResource($user))->toAuthArray($request),
             'token' => $result['token'],
+            'redirect_path' => RedirectPath::sanitize($result['redirect_path']),
         ]);
     }
 
