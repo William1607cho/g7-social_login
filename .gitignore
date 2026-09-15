@@ -15,3 +15,6 @@ composer.lock
 *.bak-*
 *.local
 *.log
+
+# Local project record (Dev-Project management)
+/PROJECT.md

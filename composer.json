@@ -2,7 +2,7 @@
     "name": "plugins/g7-social_login",
     "description": "Kakao/Google OAuth login, auto-link by verified email, and manual link/unlink from the member profile page for Gnuboard7",
     "type": "library",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "license": "MIT",
     "authors": [
         {
