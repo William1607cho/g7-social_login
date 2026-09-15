@@ -211,43 +211,41 @@ class LoginPageWidgetListener implements HookListenerInterface
             }
         }
 
+        // sequence 로 감싸지 않고 apiCall 을 직접 둔다 — 코어 TemplateApp::executeInitActions 는
+        // init action 을 ActionDefinition 으로 옮길 때 `actions` 필드를 복사하지 않아, sequence 가
+        // 빈 배열로 조용히 건너뛰어져 교환 API 가 한 번도 호출되지 않았다(실측).
         $initActions[] = [
             '_marker' => self::INIT_ACTION_MARKER,
             'if' => '{{query?.social_exchange}}',
-            'handler' => 'sequence',
-            'actions' => [
+            'handler' => 'apiCall',
+            'target' => '/api/plugins/g7-social_login/exchange',
+            'params' => [
+                'method' => 'POST',
+                'body' => ['code' => '{{query.social_exchange}}'],
+            ],
+            'onSuccess' => [
                 [
-                    'handler' => 'apiCall',
-                    'target' => '/api/plugins/g7-social_login/exchange',
-                    'params' => [
-                        'method' => 'POST',
-                        'body' => ['code' => '{{query.social_exchange}}'],
-                    ],
-                    'onSuccess' => [
-                        [
-                            'handler' => 'saveToLocalStorage',
-                            'params' => ['key' => 'auth_token', 'value' => '{{response.token}}'],
-                        ],
-                        [
-                            'handler' => 'setState',
-                            'params' => ['target' => 'global', 'currentUser' => '{{response.data}}'],
-                        ],
-                        [
-                            'handler' => 'toast',
-                            'params' => ['type' => 'success', 'message' => '$t:auth.login_success'],
-                        ],
-                        [
-                            'handler' => 'navigate',
-                            // 서버가 검증한 값만 쓴다(쿼리스트링의 redirect 는 읽지 않음).
-                            'params' => ['path' => '{{response.redirect_path ?? \'/\'}}'],
-                        ],
-                    ],
-                    'onError' => [
-                        [
-                            'handler' => 'toast',
-                            'params' => ['type' => 'error', 'message' => '{{error.message}}'],
-                        ],
-                    ],
+                    'handler' => 'saveToLocalStorage',
+                    'params' => ['key' => 'auth_token', 'value' => '{{response.token}}'],
+                ],
+                [
+                    'handler' => 'setState',
+                    'params' => ['target' => 'global', 'currentUser' => '{{response.data}}'],
+                ],
+                [
+                    'handler' => 'toast',
+                    'params' => ['type' => 'success', 'message' => '$t:auth.login_success'],
+                ],
+                [
+                    'handler' => 'navigate',
+                    // 서버가 검증한 값만 쓴다(쿼리스트링의 redirect 는 읽지 않음).
+                    'params' => ['path' => '{{response.redirect_path ?? \'/\'}}'],
+                ],
+            ],
+            'onError' => [
+                [
+                    'handler' => 'toast',
+                    'params' => ['type' => 'error', 'message' => '{{error.message}}'],
                 ],
             ],
         ];
