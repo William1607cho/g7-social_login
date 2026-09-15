@@ -2,6 +2,7 @@
 
 namespace Plugins\G7\SocialLogin\Services;
 
+use App\Contracts\Repositories\RoleRepositoryInterface;
 use App\Extension\HookManager;
 use App\Models\User;
 use App\Services\PluginSettingsService;
@@ -42,8 +43,18 @@ class SocialAuthService
     /** 연동 nonce 유효시간(분) — 인증된 XHR 발급 → 곧바로 브라우저 이동에 쓰인다 */
     private const LINK_NONCE_TTL_MINUTES = 5;
 
+    /**
+     * 신규 가입자 기본 역할 식별자.
+     *
+     * 코어에는 이 값을 담은 설정·상수가 없고, 회원가입(`AuthService::register`)과 관리자 회원 생성
+     * (`UserService::createUser`) 두 경로 모두 `RoleRepositoryInterface::findByIdentifier('user')`
+     * 리터럴로 조회한다 — 같은 저장소·같은 식별자를 그대로 따른다.
+     */
+    private const DEFAULT_ROLE_IDENTIFIER = 'user';
+
     public function __construct(
         private readonly PluginSettingsService $settings,
+        private readonly RoleRepositoryInterface $roleRepository,
     ) {}
 
     public function isEnabled(string $provider): bool
@@ -227,6 +238,15 @@ class SocialAuthService
                 'user_id' => $user->id,
                 'has_real_password' => false,
             ]);
+
+            // 코어 회원가입과 동일한 기본 역할 부여 — 없으면 로그인 사용자는 guest 권한으로도
+            // 폴백되지 않아(AuthServiceProvider::checkPermission → Gate) 게시판 읽기조차 막힌다.
+            // 자동연동(기존 계정) 경로는 이미 역할이 있으므로 여기(신규 생성)에서만 부여한다.
+            $defaultRole = $this->roleRepository->findByIdentifier(self::DEFAULT_ROLE_IDENTIFIER);
+            if ($defaultRole) {
+                $user->roles()->sync([$defaultRole->id]);
+                $user->flushPermissionCaches();
+            }
 
             return $user;
         });

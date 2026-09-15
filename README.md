@@ -23,6 +23,13 @@ atozai.william-cho.com(그누보드7)에 카카오·구글 소셜 로그인을 �
   `composer update --no-dev` 후 교체하고, 교체 직후 `queue:work`·`reverb:start` 컨테이너를 재시작한다
   (구 오토로더 classmap 을 메모리에 들고 있어 삭제된 경로를 include 하다 죽음).
 
+## 알려진 제약
+- **소셜 가입자는 현재 비밀번호를 설정할 수 없다.** 코어 `PUT /api/me/password`(`ChangePasswordRequest`)가
+  `current_password:sanctum` 을 서버에서 요구하고, 소셜 가입자는 랜덤 해시 비밀번호라 통과 불가. 따라서 계정 복구
+  수단이 연동된 소셜 계정뿐이다. `core.user.change_password_validation_rules` 필터로 규칙을 뺄 수는 있지만,
+  그러면 로그인 토큰 탈취자가 비밀번호를 설정해 계정을 완전히 장악할 수 있어 의도적으로 열지 않았다
+  (카카오 재인증 조건부 설계가 필요한 별도 사안).
+
 ## 레포명
 https://github.com/William1607cho/g7-social_login (2026-09-12 push 완료)
 
@@ -314,3 +321,45 @@ main (feature 브랜치 없이 단일 브랜치로 개발 — 아직 비공개 �
     방침에 따라 조회만 하고 유지(정리하지 않음).
   - 교체 전 vendor 는 삭제하지 않고 `gnuboard7-blog/backups/` 로 이동 보관(tar 스냅샷과 별도).
   - 글 상세 페이지·forum-addon 리액션/채택/잠금·comment-editor 댓글 입력은 blog 에 게시글 0건이라 윌리엄 결정으로 생략.
+
+### 2026-09-15 (이어서) — 소셜 가입자 기본 역할 부여 + 프로필 편집 폼 개방(안 A) (직접 수행)
+대상: blog.william-cho.com. 코어·템플릿 무변경.
+- **증상**: ① 카카오 가입 계정(user 3)이 마이페이지 > 프로필 수정에서 현재 비밀번호를 요구받아 이름 등 어떤 항목도
+  바꿀 수 없음. ② 같은 계정이 역할 0개 — 조회 결과 doodle 게시판 기준 비회원(posts.read·comments.read·
+  attachments.download 허용)보다도 권한이 적음.
+- **원인** (조사 명령서로 코드 확정):
+  - ① 서버가 아니라 레이아웃 화면 흐름. `PUT /api/me` 는 일반 항목에 비밀번호 불필요(`UpdateProfileRequest`
+    `current_password => required_with:password`, 라우트 미들웨어에도 비밀번호 확인 없음). 템플릿
+    `mypage/profile-edit` 이 `_local.isPasswordVerified=false` 로 시작하고 편집 폼 전체(`_edit.json`)가 그
+    조건으로 가려지며, 값은 `POST /api/me/verify-password`(`Hash::check`, 서버에 상태 저장 없음) 성공 시에만
+    true. 소셜 가입자는 랜덤 해시라 통과 불가. 막히는 범위는 편집 폼 전체(이름·닉네임·연락처·홈페이지·국가/언어/
+    시간대·주소·서명·자기소개·알림·통화/배송국가), 아바타와 알림 토글은 보기 화면이라 무관.
+  - ② 코어 회원가입(`AuthService::register`)·관리자 생성(`UserService::createUser`)은 `user` 역할을 자동 부여하지만
+    플러그인 신규 가입(`SocialAuthService::handleLogin` 의 `User::create`)엔 없었음. 로그인 사용자는 역할이 없어도
+    guest 권한으로 폴백되지 않음(`AuthServiceProvider::checkPermission` → `Gate::forUser`, 권한은 역할에서만).
+- **수정**:
+  - 신규 소셜 가입 트랜잭션에서 `RoleRepositoryInterface::findByIdentifier('user')` → `roles()->sync` →
+    `flushPermissionCaches()`. 코어에 기본 역할 설정·상수가 없고 두 코어 경로가 모두 이 저장소·`'user'` 리터럴을
+    쓰므로 동일하게 따름(`UserService` 와 같은 캐시 플러시 포함). 자동연동(기존 계정) 경로는 역할 미변경.
+  - 신규 `ProfileEditPasswordGateListener`:
+    - `core.user.filter_resource_data` → `/api/me`·`/api/auth/user` 에 불리언 `g7_social_login_has_real_password`
+      하나만 추가(플래그 행 부재=true, 행 있으면 `has_real_password`).
+    - `core.layout_extension.after_apply` → `mypage/profile-edit` 의 두 게이트 노드를 `meta.description` +
+      원래 `if` 로 찾아, 편집 폼 `{{_local?.isPasswordVerified || user?.data?.g7_social_login_has_real_password === false}}`,
+      확인 섹션 `{{!_local?.isPasswordVerified && user?.data?.g7_social_login_has_real_password !== false}}` 로 재작성.
+      플래그 없음·응답 로드 전·true 는 기존 동작(fail-closed, 코어 평가기로 6케이스 사전 평가). 두 노드를 정확히
+      하나씩 못 찾으면 warning 로그 후 원본 레이아웃 통과(한쪽만 바꾸는 깨진 화면 방지).
+  - 반영: `hooks:cache` 재생성(신규 리스너 등록 필수) + `template:cache-clear`.
+- **검증**:
+  - 서빙 레이아웃 전후 구조 diff: `mypage/profile-edit` 은 두 `if` 만 변경(`{{ }}` 원문 누출 없음),
+    `mypage/profile`(소셜 연동 카드 포함)·`change-password`·`auth/login`·`home`·`board/index` 는 바이트 동일.
+  - `/api/me`·`/api/auth/user`(요청마다 별도 프로세스, DB 토큰 미생성): user 3 → `false`(boolean), 관리자 user 1 →
+    `true`. 응답에 추가된 인증 관련 키는 이 불리언 하나뿐.
+  - 관리자 회귀(실브라우저, user 1): `/mypage/profile/edit` 에서 비밀번호 확인 섹션 표시·편집 폼(`name` 입력) 미표시,
+    콘솔 에러 0.
+  - 깜빡임: 관리자 세션 실측 레이아웃 응답 768ms → `/api/me` 응답 1199ms. 소셜 가입자는 이 사이(최대 약 0.4초)
+    확인 섹션이 보였다가 폼으로 바뀜.
+  - 역할 부여: 코드 경로 확인(컨테이너에서 서비스 DI 해석 정상, `findByIdentifier('user')` → id 3, 신규 생성
+    트랜잭션 내부에만 존재, 자동연동 분기엔 없음). 실제 신규 가입 테스트는 계정이 늘어나 미실시.
+  - 윌리엄 실브라우저(user 3, 이름 변경 저장): (확인 대기)
+- **기존 계정**: user 3 역할은 이번에 변경하지 않음(별도 승인 사항).

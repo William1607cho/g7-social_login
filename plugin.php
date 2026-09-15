@@ -7,6 +7,7 @@ use Plugins\G7\SocialLogin\Listeners\LoginPageWidgetListener;
 use Plugins\G7\SocialLogin\Listeners\MypageProfileWidgetListener;
 use Plugins\G7\SocialLogin\Listeners\NotificationExtractDataListener;
 use Plugins\G7\SocialLogin\Listeners\PasswordChangedFlagListener;
+use Plugins\G7\SocialLogin\Listeners\ProfileEditPasswordGateListener;
 
 /**
  * 소셜 로그인(카카오/구글) 플러그인.
@@ -34,6 +35,7 @@ class Plugin extends AbstractPlugin
             MypageProfileWidgetListener::class,
             NotificationExtractDataListener::class,
             PasswordChangedFlagListener::class,
+            ProfileEditPasswordGateListener::class,
         ];
     }
 
